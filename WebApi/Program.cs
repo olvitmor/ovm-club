@@ -13,6 +13,7 @@ using StackExchange.Redis;
 using WebApi.Auth;
 using WebApi.Configuration;
 using WebApi.Middleware;
+using WebApi.Time;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,7 +23,9 @@ builder.Host.UseDefaultServiceProvider(options =>
     options.ValidateOnBuild = true;
 });
 
-builder.Services.AddControllers();
+builder.Services
+    .AddControllers(options => options.ModelBinderProviders.Insert(0, new TimeModelBinderProvider()))
+    .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new UtcDateTimeJsonConverter()));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options => options.AddBearerAuthentication());
 builder.Services.AddProblemDetails();
