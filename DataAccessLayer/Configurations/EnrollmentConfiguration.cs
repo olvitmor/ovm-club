@@ -19,6 +19,7 @@ public class EnrollmentConfiguration : IEntityTypeConfiguration<Enrollment>
         builder.Property(x => x.Status).HasColumnName("status").IsRequired();
         builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp with time zone");
         builder.Property(x => x.CancelledAt).HasColumnName("cancelled_at").HasColumnType("timestamp with time zone");
+        builder.Property(x => x.RefundedVisits).HasColumnName("refunded_visits");
 
         builder
             .HasOne<User>()
@@ -29,5 +30,12 @@ public class EnrollmentConfiguration : IEntityTypeConfiguration<Enrollment>
             .HasOne(x => x.Class)
             .WithMany(x => x.Enrollments)
             .HasForeignKey(x => x.ClassId);
+
+        builder.HasIndex(x => x.ClassId);
+
+        builder
+            .HasIndex(x => x.ClassId, "IX_enrollments_class_id_active")
+            .IncludeProperties(x => x.Seats)
+            .HasFilter($"status = '{EnrollmentStatus.Active}'");
     }
 }

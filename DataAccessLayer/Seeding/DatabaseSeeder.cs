@@ -28,7 +28,7 @@ public static class DatabaseSeeder
 
     private static readonly int[] Durations = [45, 60, 90];
 
-    public static async Task SeedAsync(ClubDbContext dbContext, CancellationToken ct = default)
+    public static async Task SeedAsync(ClubDbContext dbContext, TimeSpan refundCutoff, CancellationToken ct = default)
     {
         if (await dbContext.Users.AnyAsync(ct))
         {
@@ -160,6 +160,10 @@ public static class DatabaseSeeder
                 pass.RemainingVisits -= seats;
             }
 
+            var cancelledAt = cancelled
+                ? CancelledBetween(createdAt, scheduledClass.StartsAt, random)
+                : (DateTime?)null;
+
             enrollments.Add(new Enrollment
             {
                 UserId = user.Id,
@@ -167,8 +171,9 @@ public static class DatabaseSeeder
                 Seats = seats,
                 Status = cancelled ? "cancelled" : "active",
                 CreatedAt = createdAt,
-                CancelledAt = cancelled
-                    ? CancelledBetween(createdAt, scheduledClass.StartsAt, random)
+                CancelledAt = cancelledAt,
+                RefundedVisits = cancelledAt.HasValue
+                    ? RefundedVisits(scheduledClass, seats, cancelledAt.Value, refundCutoff)
                     : null
             });
         }
@@ -268,6 +273,11 @@ public static class DatabaseSeeder
         var offset = TimeSpan.FromHours(random.Next(1, 48));
 
         return createdAt + (offset < window ? offset : window * 0.5);
+    }
+
+    private static int RefundedVisits(Class scheduledClass, int seats, DateTime cancelledAt, TimeSpan refundCutoff)
+    {
+        return scheduledClass.IsCancelled || scheduledClass.StartsAt - cancelledAt >= refundCutoff ? seats : 0;
     }
 
     private static Pass? FindDonor(List<Pass> passes, DateOnly today, int seats, ref int position)

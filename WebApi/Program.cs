@@ -1,5 +1,6 @@
 using System.Text;
 using BusinessLogic;
+using BusinessLogic.Options;
 using Common.Caching;
 using DataAccessLayer;
 using DataAccessLayer.Entities;
@@ -8,6 +9,7 @@ using DataAccessLayer.UnitOfWork;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using StackExchange.Redis;
 using WebApi.Auth;
@@ -92,7 +94,9 @@ using (var scope = app.Services.CreateScope())
     var dbContext = scope.ServiceProvider.GetRequiredService<ClubDbContext>();
 
     await dbContext.Database.MigrateAsync();
-    await DatabaseSeeder.SeedAsync(dbContext);
+    var bookingOptions = scope.ServiceProvider.GetRequiredService<IOptions<BookingOptions>>().Value;
+
+    await DatabaseSeeder.SeedAsync(dbContext, bookingOptions.RefundCutoff);
 }
 
 app.Run();
