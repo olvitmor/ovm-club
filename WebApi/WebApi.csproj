@@ -18,6 +18,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Common\Common.csproj" />
     <ProjectReference Include="..\DataAccessLayer\DataAccessLayer.csproj" />
+    <ProjectReference Include="..\BusinessLogic\BusinessLogic.csproj" />
   </ItemGroup>
 
 </Project>

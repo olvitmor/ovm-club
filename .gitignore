@@ -42,6 +42,7 @@ coveragereport/
 *.lcov
 
 # Visual Studio
+.vscode/
 .vs/
 *.user
 *.userosscache

@@ -24,6 +24,7 @@
     <ProjectReference Include="..\Common\Common.csproj" />
     <ProjectReference Include="..\DataAccessLayer\DataAccessLayer.csproj" />
     <ProjectReference Include="..\WebApi\WebApi.csproj" />
+    <ProjectReference Include="..\BusinessLogic\BusinessLogic.csproj" />
   </ItemGroup>
 
 </Project>

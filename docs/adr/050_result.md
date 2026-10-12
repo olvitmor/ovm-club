@@ -9,8 +9,8 @@
 Свой `Result<T>` в `BusinessLogic`: `Success(T)`, `NotFound`, `Conflict(ConflictReason)`.
 
 - Причины отказа — перечисление `ConflictReason`. Строка контракта задаётся атрибутом `[JsonStringEnumMemberName("capacity-exceeded")]` (.NET 9) на каждом значении.
-  - `JsonStringEnumConverter` сериализует значение в `reason` строкой контракта.
-  - Метод расширения `ToCode()` читает тот же атрибут — для логов и тестов. Строка задаётся в одном месте.
+  - Метод расширения `ToCode()` читает этот атрибут; `BaseApiController` кладёт `reason.ToCode()` в расширение `reason` у `ProblemDetails`. Так строка не зависит от настроек JSON в разных местах конвейера.
+  - Тот же атрибут понимает `JsonStringEnumConverter`, если перечисление окажется в модели ответа; тест сверяет оба пути.
   - Произвольную строку передать нельзя, `switch` проверяет полноту.
   - Переопределить `ToString()` у `enum` в C# нельзя, поэтому `ToCode()`.
 - `BaseApiController` переводит `Result` одним методом:

@@ -1,4 +1,5 @@
 using System.Text;
+using BusinessLogic;
 using Common.Caching;
 using DataAccessLayer;
 using DataAccessLayer.Entities;
@@ -10,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using StackExchange.Redis;
 using WebApi.Auth;
+using WebApi.Configuration;
 using WebApi.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -22,7 +24,7 @@ builder.Host.UseDefaultServiceProvider(options =>
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options => options.AddBearerAuthentication());
 builder.Services.AddProblemDetails();
 builder.Services.AddHealthChecks();
 
@@ -30,6 +32,10 @@ builder.Services.AddDbContext<ClubDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Postgres")));
 
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddApplicationOptions();
+builder.Services.AddBusinessLogic();
 
 builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
     ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis")!));
