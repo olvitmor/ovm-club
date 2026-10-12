@@ -45,6 +45,7 @@ public class SchemaAndSeedingTests
             .IgnoreQueryFilters()
             .Include(x => x.Class)
             .Where(x => x.Status == EnrollmentStatus.Cancelled)
+            .Where(x => SeededUsers(dbContext).Contains(x.UserId))
             .ToListAsync();
 
         Assert.IsTrue(cancelled.Count > 0);
@@ -68,9 +69,15 @@ public class SchemaAndSeedingTests
 
         var withRefund = await dbContext.Enrollments
             .IgnoreQueryFilters()
+            .Where(x => SeededUsers(dbContext).Contains(x.UserId))
             .CountAsync(x => x.Status == EnrollmentStatus.Active && x.RefundedVisits != null);
 
         Assert.AreEqual(0, withRefund);
+    }
+
+    private static IQueryable<long> SeededUsers(ClubDbContext dbContext)
+    {
+        return dbContext.Users.Where(x => !x.Email.StartsWith("test-")).Select(x => x.Id);
     }
 
     [TestMethod]

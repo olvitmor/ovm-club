@@ -17,4 +17,12 @@ public class ClassRepository : GenericRepository<Class>, IClassRepository
             .Include(x => x.Enrollments)
             .FirstOrDefaultAsync(x => x.Id == id, ct);
     }
+
+    public async Task<Class?> LockAsync(long id, CancellationToken ct = default)
+    {
+        return await _dbSet
+            .FromSql($"SELECT * FROM classes WHERE id = {id} FOR UPDATE")
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(ct);
+    }
 }
