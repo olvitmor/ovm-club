@@ -45,7 +45,7 @@ public class EnrollmentsController : BaseApiController
             return ValidationProblem(ModelState);
         }
 
-        var command = new CreateEnrollmentCommand(CurrentUserId, request.ClassId!.Value, request.Seats!.Value);
+        var command = new CreateEnrollmentCommand(CurrentUserId, request.ClassId!.Value, request.Seats!.Value, idempotencyKey);
         var result = await _commands.ProcessCommandAsync(command, ct);
 
         return ToActionResult(

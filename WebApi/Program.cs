@@ -15,6 +15,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using StackExchange.Redis;
 using WebApi.Auth;
+using WebApi.Background;
 using WebApi.Configuration;
 using WebApi.Middleware;
 using WebApi.Time;
@@ -54,6 +55,8 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddApplicationOptions();
 builder.Services.AddBusinessLogic();
+builder.Services.AddSingleton<IdempotencyKeyCleanupService>();
+builder.Services.AddHostedService(provider => provider.GetRequiredService<IdempotencyKeyCleanupService>());
 
 builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
     ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis")!));

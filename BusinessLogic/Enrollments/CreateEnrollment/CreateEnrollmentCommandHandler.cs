@@ -1,8 +1,12 @@
+using System.Text.Json;
 using BusinessLogic.Booking;
+using BusinessLogic.Idempotency;
+using BusinessLogic.Options;
 using BusinessLogic.Results;
 using BusinessLogic.Time;
 using DataAccessLayer.Entities;
 using DataAccessLayer.UnitOfWork;
+using Microsoft.Extensions.Options;
 using Ovm.Cqrs;
 
 namespace BusinessLogic.Enrollments.CreateEnrollment;
@@ -11,16 +15,58 @@ public sealed class CreateEnrollmentCommandHandler : ICommandHandler<CreateEnrol
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _timeProvider;
+    private readonly IdempotencyOptions _idempotencyOptions;
 
-    public CreateEnrollmentCommandHandler(IUnitOfWork unitOfWork, TimeProvider timeProvider)
+    public CreateEnrollmentCommandHandler(
+        IUnitOfWork unitOfWork,
+        TimeProvider timeProvider,
+        IOptions<IdempotencyOptions> idempotencyOptions)
     {
         _unitOfWork = unitOfWork;
         _timeProvider = timeProvider;
+        _idempotencyOptions = idempotencyOptions.Value;
     }
 
     public async Task<Result<CreatedEnrollment>> HandleAsync(CreateEnrollmentCommand command, CancellationToken ct)
     {
         await using var transaction = await _unitOfWork.DbContext.Database.BeginTransactionAsync(ct);
+
+        var now = _timeProvider.GetUtcNowTruncated();
+        var requestHash = IdempotencyHash.Of($"{command.ClassId}:{command.Seats}");
+
+        // решение: в key хранится SHA-256 ключа — длина ключа по контракту не ограничена, а запись btree-индекса ограничена.
+        var idempotencyKey = await _unitOfWork.IdempotencyKey.TryAcquireAsync(
+            new IdempotencyKey
+            {
+                UserId = command.UserId,
+                Operation = IdempotencyOperation.CreateEnrollment,
+                Key = IdempotencyHash.Of(command.IdempotencyKey),
+                RequestHash = requestHash,
+                CreatedAt = now
+            },
+            now - _idempotencyOptions.Retention,
+            ct);
+
+        if (idempotencyKey == null)
+        {
+            var stored = await _unitOfWork.IdempotencyKey.GetAsync(
+                    command.UserId,
+                    IdempotencyOperation.CreateEnrollment,
+                    IdempotencyHash.Of(command.IdempotencyKey),
+                    ct)
+                ?? throw new InvalidOperationException(
+                    $"Idempotency key of user {command.UserId} for CreateEnrollment neither acquired nor found");
+
+            if (stored.RequestHash != requestHash)
+            {
+                return ConflictReason.IdempotencyKeyReused;
+            }
+
+            return JsonSerializer.Deserialize<CreatedEnrollment>(
+                    stored.ResponseBody
+                        ?? throw new InvalidOperationException($"Idempotency key {stored.Id} has no response"))
+                ?? throw new InvalidOperationException($"Idempotency key {stored.Id} has empty response");
+        }
 
         var scheduledClass = await _unitOfWork.Class.LockAsync(command.ClassId, ct);
 
@@ -28,8 +74,6 @@ public sealed class CreateEnrollmentCommandHandler : ICommandHandler<CreateEnrol
         {
             return Result<CreatedEnrollment>.NotFound();
         }
-
-        var now = _timeProvider.GetUtcNowTruncated();
 
         // решение: при нескольких причинах отказа отвечаем первой по порядку «занятие → абонемент → места»:
         // сначала то, что само не исправится, последней — вместимость, которая может освободиться.
@@ -75,13 +119,19 @@ public sealed class CreateEnrollmentCommandHandler : ICommandHandler<CreateEnrol
         pass.RemainingVisits -= command.Seats;
 
         await _unitOfWork.SaveChangesAsync(ct);
-        await transaction.CommitAsync(ct);
 
-        return new CreatedEnrollment(
+        var created = new CreatedEnrollment(
             enrollment.Id,
             enrollment.ClassId,
             enrollment.Seats,
             enrollment.Status,
             enrollment.CreatedAt);
+
+        idempotencyKey.ResponseBody = JsonSerializer.Serialize(created);
+
+        await _unitOfWork.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
+
+        return created;
     }
 }

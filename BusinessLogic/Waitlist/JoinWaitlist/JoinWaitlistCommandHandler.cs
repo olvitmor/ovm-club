@@ -1,4 +1,6 @@
+using System.Text.Json;
 using BusinessLogic.Booking;
+using BusinessLogic.Idempotency;
 using BusinessLogic.Options;
 using BusinessLogic.Results;
 using BusinessLogic.Time;
@@ -14,20 +16,60 @@ public sealed class JoinWaitlistCommandHandler : ICommandHandler<JoinWaitlistCom
     private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _timeProvider;
     private readonly BookingOptions _options;
+    private readonly IdempotencyOptions _idempotencyOptions;
 
     public JoinWaitlistCommandHandler(
         IUnitOfWork unitOfWork,
         TimeProvider timeProvider,
-        IOptions<BookingOptions> options)
+        IOptions<BookingOptions> options,
+        IOptions<IdempotencyOptions> idempotencyOptions)
     {
         _unitOfWork = unitOfWork;
         _timeProvider = timeProvider;
         _options = options.Value;
+        _idempotencyOptions = idempotencyOptions.Value;
     }
 
     public async Task<Result<JoinedWaitlist>> HandleAsync(JoinWaitlistCommand command, CancellationToken ct)
     {
         await using var transaction = await _unitOfWork.DbContext.Database.BeginTransactionAsync(ct);
+
+        var now = _timeProvider.GetUtcNowTruncated();
+        var requestHash = IdempotencyHash.Of($"{command.ClassId}:{command.Seats}");
+
+        // решение: в key хранится SHA-256 ключа — длина ключа по контракту не ограничена, а запись btree-индекса ограничена.
+        var idempotencyKey = await _unitOfWork.IdempotencyKey.TryAcquireAsync(
+            new IdempotencyKey
+            {
+                UserId = command.UserId,
+                Operation = IdempotencyOperation.JoinWaitlist,
+                Key = IdempotencyHash.Of(command.IdempotencyKey),
+                RequestHash = requestHash,
+                CreatedAt = now
+            },
+            now - _idempotencyOptions.Retention,
+            ct);
+
+        if (idempotencyKey == null)
+        {
+            var stored = await _unitOfWork.IdempotencyKey.GetAsync(
+                    command.UserId,
+                    IdempotencyOperation.JoinWaitlist,
+                    IdempotencyHash.Of(command.IdempotencyKey),
+                    ct)
+                ?? throw new InvalidOperationException(
+                    $"Idempotency key of user {command.UserId} for JoinWaitlist neither acquired nor found");
+
+            if (stored.RequestHash != requestHash)
+            {
+                return ConflictReason.IdempotencyKeyReused;
+            }
+
+            return JsonSerializer.Deserialize<JoinedWaitlist>(
+                    stored.ResponseBody
+                        ?? throw new InvalidOperationException($"Idempotency key {stored.Id} has no response"))
+                ?? throw new InvalidOperationException($"Idempotency key {stored.Id} has empty response");
+        }
 
         var scheduledClass = await _unitOfWork.Class.LockAsync(command.ClassId, ct);
 
@@ -36,7 +78,6 @@ public sealed class JoinWaitlistCommandHandler : ICommandHandler<JoinWaitlistCom
             return Result<JoinedWaitlist>.NotFound();
         }
 
-        var now = _timeProvider.GetUtcNowTruncated();
         var classConflict = BookingPolicy.CheckClassOpen(scheduledClass.IsCancelled, scheduledClass.StartsAt, now);
 
         if (classConflict != null)
@@ -74,10 +115,18 @@ public sealed class JoinWaitlistCommandHandler : ICommandHandler<JoinWaitlistCom
 
         await _unitOfWork.SaveChangesAsync(ct);
 
-        var position = await _unitOfWork.Waitlist.GetPositionAsync(entry, ct);
+        var joined = new JoinedWaitlist(
+            entry.Id,
+            entry.ClassId,
+            entry.Seats,
+            await _unitOfWork.Waitlist.GetPositionAsync(entry, ct),
+            entry.CreatedAt);
 
+        idempotencyKey.ResponseBody = JsonSerializer.Serialize(joined);
+
+        await _unitOfWork.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
 
-        return new JoinedWaitlist(entry.Id, entry.ClassId, entry.Seats, position, entry.CreatedAt);
+        return joined;
     }
 }
