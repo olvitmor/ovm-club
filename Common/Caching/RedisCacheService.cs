@@ -39,4 +39,9 @@ public class RedisCacheService : ICacheService
     {
         await _connection.GetDatabase().KeyDeleteAsync(key);
     }
+
+    public async Task<long> IncrementAsync(string key, CancellationToken ct = default)
+    {
+        return await _connection.GetDatabase().StringIncrementAsync(key);
+    }
 }

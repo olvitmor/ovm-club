@@ -1,3 +1,4 @@
+using BusinessLogic.Enrollments;
 using Microsoft.Extensions.DependencyInjection;
 using Ovm.Cqrs;
 
@@ -7,6 +8,7 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddBusinessLogic(this IServiceCollection services)
     {
+        services.AddSingleton<EnrollmentCardCache>();
         services.AddCqrs(cqrs => cqrs.AddHandlersFromAssembly(typeof(ServiceCollectionExtensions).Assembly));
 
         return services;

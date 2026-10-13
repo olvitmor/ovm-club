@@ -15,12 +15,15 @@ public sealed class ChangeEnrollmentSeatsCommandHandler
     private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _timeProvider;
     private readonly BookingOptions _options;
+    private readonly EnrollmentCardCache _cardCache;
 
     public ChangeEnrollmentSeatsCommandHandler(
         IUnitOfWork unitOfWork,
         TimeProvider timeProvider,
-        IOptions<BookingOptions> options)
+        IOptions<BookingOptions> options,
+        EnrollmentCardCache cardCache)
     {
+        _cardCache = cardCache;
         _unitOfWork = unitOfWork;
         _timeProvider = timeProvider;
         _options = options.Value;
@@ -59,6 +62,7 @@ public sealed class ChangeEnrollmentSeatsCommandHandler
         }
 
         var difference = command.Seats - enrollment.Seats;
+        var changedUserIds = new List<long>();
 
         if (difference > 0)
         {
@@ -87,6 +91,8 @@ public sealed class ChangeEnrollmentSeatsCommandHandler
             pass.RemainingVisits -= difference;
 
             await _unitOfWork.SaveChangesAsync(ct);
+
+            changedUserIds.Add(command.UserId);
         }
         else if (difference < 0)
         {
@@ -149,12 +155,15 @@ public sealed class ChangeEnrollmentSeatsCommandHandler
             }
 
             await _unitOfWork.SaveChangesAsync(ct);
+
+            changedUserIds.AddRange(promotions.Select(x => x.Entry.UserId).Append(command.UserId));
         }
 
         var card = await EnrollmentCardReader.ReadAsync(_unitOfWork, command.UserId, command.EnrollmentId, ct)
             ?? throw new InvalidOperationException($"Card of enrollment {command.EnrollmentId} not found after change");
 
         await transaction.CommitAsync(ct);
+        await _cardCache.InvalidateAsync(changedUserIds, ct);
 
         return card;
     }

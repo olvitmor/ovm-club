@@ -16,12 +16,15 @@ public sealed class CreateEnrollmentCommandHandler : ICommandHandler<CreateEnrol
     private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _timeProvider;
     private readonly IdempotencyOptions _idempotencyOptions;
+    private readonly EnrollmentCardCache _cardCache;
 
     public CreateEnrollmentCommandHandler(
         IUnitOfWork unitOfWork,
         TimeProvider timeProvider,
-        IOptions<IdempotencyOptions> idempotencyOptions)
+        IOptions<IdempotencyOptions> idempotencyOptions,
+        EnrollmentCardCache cardCache)
     {
+        _cardCache = cardCache;
         _unitOfWork = unitOfWork;
         _timeProvider = timeProvider;
         _idempotencyOptions = idempotencyOptions.Value;
@@ -131,6 +134,7 @@ public sealed class CreateEnrollmentCommandHandler : ICommandHandler<CreateEnrol
 
         await _unitOfWork.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
+        await _cardCache.InvalidateAsync([command.UserId], ct);
 
         return created;
     }

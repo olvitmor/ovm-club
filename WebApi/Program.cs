@@ -58,11 +58,20 @@ builder.Services.AddBusinessLogic();
 builder.Services.AddSingleton<IdempotencyKeyCleanupService>();
 builder.Services.AddHostedService(provider => provider.GetRequiredService<IdempotencyKeyCleanupService>());
 
+// решение: приложение стартует и работает без Redis — кэш карточки пропускается, а команды к недоступному Redis
+// падают сразу, а не ждут переподключения в очереди.
 builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
-    ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis")!));
+{
+    var options = ConfigurationOptions.Parse(builder.Configuration.GetConnectionString("Redis")!);
+    options.AbortOnConnectFail = false;
+    options.BacklogPolicy = BacklogPolicy.FailFast;
 
-builder.Services.AddSingleton<ICacheService>(provider =>
-    new RedisCacheService(provider.GetRequiredService<IConnectionMultiplexer>(), TimeSpan.FromMinutes(5)));
+    return ConnectionMultiplexer.Connect(options);
+});
+
+builder.Services.AddSingleton<ICacheService>(provider => new RedisCacheService(
+    provider.GetRequiredService<IConnectionMultiplexer>(),
+    provider.GetRequiredService<IOptions<CacheOptions>>().Value.EnrollmentCardTtl));
 
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 

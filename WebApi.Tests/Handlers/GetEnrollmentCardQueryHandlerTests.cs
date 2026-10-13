@@ -64,7 +64,9 @@ public class GetEnrollmentCardQueryHandlerTests : DatabaseTestBase
     private static async Task<Result<EnrollmentCard>> Handle(long userId, long enrollmentId)
     {
         await using var scope = Factory.Services.CreateAsyncScope();
-        var handler = new GetEnrollmentCardQueryHandler(scope.ServiceProvider.GetRequiredService<ClubReadDbContext>());
+        var handler = new GetEnrollmentCardQueryHandler(
+            scope.ServiceProvider.GetRequiredService<ClubReadDbContext>(),
+            scope.ServiceProvider.GetRequiredService<EnrollmentCardCache>());
 
         return await handler.HandleAsync(new GetEnrollmentCardQuery(userId, enrollmentId), CancellationToken.None);
     }

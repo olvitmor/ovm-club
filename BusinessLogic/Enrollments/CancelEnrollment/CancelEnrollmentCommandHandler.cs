@@ -15,12 +15,15 @@ public sealed class CancelEnrollmentCommandHandler
     private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _timeProvider;
     private readonly BookingOptions _options;
+    private readonly EnrollmentCardCache _cardCache;
 
     public CancelEnrollmentCommandHandler(
         IUnitOfWork unitOfWork,
         TimeProvider timeProvider,
-        IOptions<BookingOptions> options)
+        IOptions<BookingOptions> options,
+        EnrollmentCardCache cardCache)
     {
+        _cardCache = cardCache;
         _unitOfWork = unitOfWork;
         _timeProvider = timeProvider;
         _options = options.Value;
@@ -137,6 +140,7 @@ public sealed class CancelEnrollmentCommandHandler
 
         await _unitOfWork.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
+        await _cardCache.InvalidateAsync(promotions.Select(x => x.Entry.UserId).Append(command.UserId), ct);
 
         return new CancelledEnrollment(enrollment.Id, enrollment.Status, refundedVisits);
     }
