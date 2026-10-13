@@ -6,6 +6,7 @@ using DataAccessLayer;
 using DataAccessLayer.Entities;
 using DataAccessLayer.Seeding;
 using DataAccessLayer.UnitOfWork;
+using DataReadAccessLayer;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -35,6 +36,10 @@ builder.Services.AddHealthChecks();
 
 builder.Services.AddDbContext<ClubDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Postgres")));
+
+builder.Services.AddDbContext<ClubReadDbContext>(options => options
+    .UseNpgsql(builder.Configuration.GetConnectionString("Postgres"))
+    .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
 
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 

@@ -1,10 +1,12 @@
 using DataAccessLayer.Entities;
 using Microsoft.EntityFrameworkCore;
 
+using WebApi.Tests.Infrastructure;
+
 namespace WebApi.Tests.Repositories;
 
 [TestClass]
-public class ClassRepositoryTests : RepositoryTestBase
+public class ClassRepositoryTests : DatabaseTestBase
 {
     [TestMethod]
     public async Task LockFindsClass()

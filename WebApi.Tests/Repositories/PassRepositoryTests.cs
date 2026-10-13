@@ -1,7 +1,9 @@
+using WebApi.Tests.Infrastructure;
+
 namespace WebApi.Tests.Repositories;
 
 [TestClass]
-public class PassRepositoryTests : RepositoryTestBase
+public class PassRepositoryTests : DatabaseTestBase
 {
     [TestMethod]
     public async Task LockReturnsRequestedPassesOrderedById()

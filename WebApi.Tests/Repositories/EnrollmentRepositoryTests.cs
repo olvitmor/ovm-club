@@ -1,7 +1,9 @@
+using WebApi.Tests.Infrastructure;
+
 namespace WebApi.Tests.Repositories;
 
 [TestClass]
-public class EnrollmentRepositoryTests : RepositoryTestBase
+public class EnrollmentRepositoryTests : DatabaseTestBase
 {
     [TestMethod]
     public async Task ActiveSeatsCountOnlyActiveEnrollmentsOfClass()

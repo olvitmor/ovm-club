@@ -1,11 +1,10 @@
 using DataAccessLayer.UnitOfWork;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using WebApi.Tests.Infrastructure;
 
-namespace WebApi.Tests.Repositories;
+namespace WebApi.Tests.Infrastructure;
 
-public abstract class RepositoryTestBase
+public abstract class DatabaseTestBase
 {
     private static readonly TimeSpan BlockingProbe = TimeSpan.FromMilliseconds(500);
     private static readonly TimeSpan ReleaseTimeout = TimeSpan.FromSeconds(10);

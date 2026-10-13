@@ -25,10 +25,17 @@ docker compose up -d
 
 ```
 dotnet tool restore
-dotnet dotnet-ef migrations add <Name> --project DataAccessLayer --startup-project WebApi
+dotnet dotnet-ef migrations add <Name> --context ClubDbContext --project DataAccessLayer --startup-project WebApi
 ```
 
 Применяются при следующем запуске приложения.
+
+После изменения схемы обновите модель чтения (`DataReadAccessLayer`) — она генерируется из БД. Нужны
+поднятый Postgres и применённые миграции:
+
+```
+python3 DataReadAccessLayer/scaffold_db.py
+```
 
 ## Тесты
 
