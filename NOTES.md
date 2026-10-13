@@ -5,7 +5,7 @@
 ## Архитектура
 - [010 Учёт занятых мест](docs/adr/010_seat-accounting.md) — подсчёт на лету, пересмотр после нагрузки
 - [020 Блокировки](docs/adr/020_locking.md) — `FOR UPDATE`: занятие, затем абонементы по возрастанию id
-- [030 Слои](docs/adr/030_layers.md) — проект `BusinessLogic`, анемичные сущности, политики
+- [030 Слои](docs/adr/030_layers.md) — Transaction Script: обработчик — сценарий, анемичные сущности, политики
 - [040 CQRS](docs/adr/040_cqrs.md) — `Ovm.Cqrs`, обработчик на каждую ручку
 - [050 Result](docs/adr/050_result.md) — `Result<T>`: успех, `404`, `409` с `reason`
 - [060 Транзакции](docs/adr/060_transactions.md) — явно в обработчике, позже базовый класс
@@ -31,6 +31,7 @@
 |---|---|
 | `enrollments` | колонка `refunded_visits`; частичный индекс `(class_id) INCLUDE (seats) WHERE status = 'active'` |
 | `classes` | индекс `(starts_at, id)` |
+| `passes` | индекс `(user_id)` стал уникальным: у клиента ровно один абонемент |
 | `waitlist_entries` | новая таблица |
 | `idempotency_keys` | новая таблица |
 

@@ -1,6 +1,6 @@
 using BusinessLogic.Enrollments;
 
-namespace WebApi.Contracts.Enrollments;
+namespace WebApi.Contracts.Enrollments.GetEnrollmentCard;
 
 public record EnrollmentCardResponse(
     long Id,

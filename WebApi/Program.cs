@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using BusinessLogic;
 using BusinessLogic.Options;
 using Common.Caching;
@@ -28,7 +29,14 @@ builder.Host.UseDefaultServiceProvider(options =>
 
 builder.Services
     .AddControllers(options => options.ModelBinderProviders.Insert(0, new TimeModelBinderProvider()))
-    .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new UtcDateTimeJsonConverter()));
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new UtcDateTimeJsonConverter());
+
+        // решение: число в кавычках ("classId": "1") — неверный формат поля и 400, а не молча принятое число,
+        // как по умолчанию в веб-настройках System.Text.Json.
+        options.JsonSerializerOptions.NumberHandling = JsonNumberHandling.Strict;
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options => options.AddBearerAuthentication());
 builder.Services.AddProblemDetails();

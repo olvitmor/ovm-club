@@ -108,6 +108,19 @@ public class SchemaAndSeedingTests
     }
 
     [TestMethod]
+    public async Task UserCannotHaveSecondPass()
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<ClubDbContext>();
+
+        var userId = await dbContext.Passes.Select(x => x.UserId).FirstAsync();
+
+        dbContext.Passes.Add(new Pass { UserId = userId, RemainingVisits = 1, ValidUntil = new DateOnly(2030, 1, 1) });
+
+        await Assert.ThrowsExceptionAsync<DbUpdateException>(() => dbContext.SaveChangesAsync());
+    }
+
+    [TestMethod]
     public async Task IdempotencyKeyIsUniquePerUserOperationAndKey()
     {
         await using var scope = _factory.Services.CreateAsyncScope();

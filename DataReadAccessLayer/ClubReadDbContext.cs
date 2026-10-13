@@ -63,7 +63,7 @@ public partial class ClubReadDbContext : DbContext
         {
             entity.ToTable("passes");
 
-            entity.HasIndex(e => e.UserId, "IX_passes_user_id");
+            entity.HasIndex(e => e.UserId, "IX_passes_user_id").IsUnique();
 
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.RemainingVisits).HasColumnName("remaining_visits");
