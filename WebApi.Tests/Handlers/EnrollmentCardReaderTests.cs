@@ -1,4 +1,4 @@
-using BusinessLogic.Enrollments;
+using BusinessLogic.Enrollments.Helpers;
 using DataAccessLayer.UnitOfWork;
 using DataReadAccessLayer;
 using Microsoft.Extensions.DependencyInjection;
