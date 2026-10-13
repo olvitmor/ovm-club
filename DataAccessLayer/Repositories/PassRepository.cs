@@ -29,4 +29,12 @@ public class PassRepository : GenericRepository<Pass>, IPassRepository
             .FromSql($"SELECT * FROM passes WHERE user_id = ANY({ids}) ORDER BY id FOR UPDATE")
             .ToListAsync(ct);
     }
+
+    public async Task<Pass> LockByUserAsync(long userId, CancellationToken ct = default)
+    {
+        var passes = await LockByUsersAsync([userId], ct);
+
+        return passes.SingleOrDefault()
+            ?? throw new InvalidOperationException($"User {userId} has no pass");
+    }
 }

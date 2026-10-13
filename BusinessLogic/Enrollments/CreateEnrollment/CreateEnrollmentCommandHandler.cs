@@ -40,7 +40,7 @@ public sealed class CreateEnrollmentCommandHandler : ICommandHandler<CreateEnrol
             return classConflict.Value;
         }
 
-        var pass = (await _unitOfWork.Pass.LockByUsersAsync([command.UserId], ct)).Single();
+        var pass = await _unitOfWork.Pass.LockByUserAsync(command.UserId, ct);
 
         var passConflict = BookingPolicy.CheckPassCovers(
             pass.ValidUntil,

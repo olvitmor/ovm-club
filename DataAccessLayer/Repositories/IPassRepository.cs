@@ -8,4 +8,6 @@ public interface IPassRepository : IGenericRepository<Pass>
     Task<Pass?> GetByUserAsync(long userId, CancellationToken ct = default);
 
     Task<List<Pass>> LockByUsersAsync(IReadOnlyCollection<long> userIds, CancellationToken ct = default);
+
+    Task<Pass> LockByUserAsync(long userId, CancellationToken ct = default);
 }

@@ -24,6 +24,31 @@ public class PassRepositoryTests : DatabaseTestBase
     }
 
     [TestMethod]
+    public async Task LockByUserReturnsPass()
+    {
+        var user = await Given.User(visits: 4);
+
+        var pass = await InUnitOfWork(async unitOfWork =>
+        {
+            await using var transaction = await unitOfWork.DbContext.Database.BeginTransactionAsync();
+
+            return await unitOfWork.Pass.LockByUserAsync(user.Id);
+        });
+
+        Assert.AreEqual(user.PassId, pass.Id);
+        Assert.AreEqual(4, pass.RemainingVisits);
+    }
+
+    [TestMethod]
+    public async Task LockByUserWithoutPassThrowsWithUserId()
+    {
+        var exception = await Assert.ThrowsExceptionAsync<InvalidOperationException>(() =>
+            InUnitOfWork(unitOfWork => unitOfWork.Pass.LockByUserAsync(long.MaxValue)));
+
+        StringAssert.Contains(exception.Message, long.MaxValue.ToString());
+    }
+
+    [TestMethod]
     public async Task LockOfNoUsersReturnsEmpty()
     {
         var passes = await InUnitOfWork(unitOfWork => unitOfWork.Pass.LockByUsersAsync([]));
