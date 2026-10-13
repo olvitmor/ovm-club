@@ -31,10 +31,19 @@ dotnet dotnet-ef migrations add <Name> --context ClubDbContext --project DataAcc
 Применяются при следующем запуске приложения.
 
 После изменения схемы обновите модель чтения (`DataReadAccessLayer`) — она генерируется из БД. Нужны
-поднятый Postgres и применённые миграции:
+поднятый Postgres и применённые миграции. Строка подключения берётся из `WebApi/appsettings.json`.
+Сначала сборка, потом удаление прошлой генерации (`--force` не удаляет модели исчезнувших таблиц):
 
 ```
-python3 DataReadAccessLayer/scaffold_db.py
+dotnet tool restore
+dotnet build WebApi
+rm -rf DataReadAccessLayer/Models DataReadAccessLayer/ClubReadDbContext.cs
+dotnet dotnet-ef dbcontext scaffold Name=ConnectionStrings:Postgres Npgsql.EntityFrameworkCore.PostgreSQL \
+  --project DataReadAccessLayer --startup-project WebApi \
+  --namespace DataReadAccessLayer.Models --context-namespace DataReadAccessLayer \
+  --context ClubReadDbContext --output-dir Models --context-dir . \
+  --table rooms --table classes --table enrollments --table passes --table waitlist_entries \
+  --no-onconfiguring --no-build
 ```
 
 ## Тесты

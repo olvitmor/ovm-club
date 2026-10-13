@@ -16,7 +16,6 @@
 
   <ItemGroup>
     <None Include="CodeTemplates\**" />
-    <None Include="scaffold_db.py" />
   </ItemGroup>
 
 </Project>
