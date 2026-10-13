@@ -3,11 +3,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Ovm.Cqrs;
 using WebApi.Contracts.Analytics.GetRoomLoad;
+using WebApi.RateLimiting;
 
 namespace WebApi.Controllers;
 
 [Authorize(Roles = AdminRole)]
 [ApiController]
+[UserRateLimit]
 [Route("analytics")]
 public class AnalyticsController : BaseApiController
 {

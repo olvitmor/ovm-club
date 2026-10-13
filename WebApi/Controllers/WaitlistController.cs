@@ -5,11 +5,13 @@ using Microsoft.AspNetCore.Mvc;
 using Ovm.Cqrs;
 using WebApi.Contracts.Waitlist.JoinWaitlist;
 using WebApi.Contracts.Waitlist.LeaveWaitlist;
+using WebApi.RateLimiting;
 
 namespace WebApi.Controllers;
 
 [Authorize]
 [ApiController]
+[UserRateLimit]
 [Route("enrollments/waitlist")]
 public class WaitlistController : BaseApiController
 {

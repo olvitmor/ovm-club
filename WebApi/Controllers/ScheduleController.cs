@@ -5,11 +5,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Ovm.Cqrs;
 using WebApi.Contracts.Schedule.GetSchedule;
+using WebApi.RateLimiting;
 
 namespace WebApi.Controllers;
 
 [Authorize]
 [ApiController]
+[UserRateLimit]
 [Route("schedule")]
 public class ScheduleController : BaseApiController
 {

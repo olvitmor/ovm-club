@@ -9,11 +9,13 @@ using WebApi.Contracts.Enrollments.CancelEnrollment;
 using WebApi.Contracts.Enrollments.ChangeEnrollmentSeats;
 using WebApi.Contracts.Enrollments.CreateEnrollment;
 using WebApi.Contracts.Enrollments.GetEnrollmentCard;
+using WebApi.RateLimiting;
 
 namespace WebApi.Controllers;
 
 [Authorize]
 [ApiController]
+[UserRateLimit]
 [Route("enrollments")]
 public class EnrollmentsController : BaseApiController
 {

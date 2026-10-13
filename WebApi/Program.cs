@@ -18,6 +18,7 @@ using WebApi.Auth;
 using WebApi.Background;
 using WebApi.Configuration;
 using WebApi.Middleware;
+using WebApi.RateLimiting;
 using WebApi.Time;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -72,6 +73,9 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
 builder.Services.AddSingleton<ICacheService>(provider => new RedisCacheService(
     provider.GetRequiredService<IConnectionMultiplexer>(),
     provider.GetRequiredService<IOptions<CacheOptions>>().Value.EnrollmentCardTtl));
+
+builder.Services.AddSingleton<UserRateLimiter>();
+builder.Services.AddScoped<UserRateLimitFilter>();
 
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 
