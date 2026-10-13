@@ -14,6 +14,16 @@ public static class BookingPolicy
         return now >= startsAt ? ConflictReason.ClassStarted : null;
     }
 
+    public static ConflictReason? CheckCancellable(bool isClassCancelled, DateTime startsAt, DateTime now)
+    {
+        return !isClassCancelled && now >= startsAt ? ConflictReason.ClassStarted : null;
+    }
+
+    public static int RefundedVisits(bool isClassCancelled, DateTime startsAt, DateTime now, int seats, TimeSpan refundCutoff)
+    {
+        return isClassCancelled || startsAt - now >= refundCutoff ? seats : 0;
+    }
+
     public static ConflictReason? CheckPassCovers(DateOnly validUntil, int remainingVisits, int visits, DateOnly today)
     {
         if (validUntil < today)

@@ -1,9 +1,11 @@
+using BusinessLogic.Enrollments.CancelEnrollment;
 using BusinessLogic.Enrollments.ChangeEnrollmentSeats;
 using BusinessLogic.Enrollments.CreateEnrollment;
 using BusinessLogic.Enrollments.GetEnrollmentCard;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Ovm.Cqrs;
+using WebApi.Contracts.Enrollments.CancelEnrollment;
 using WebApi.Contracts.Enrollments.ChangeEnrollmentSeats;
 using WebApi.Contracts.Enrollments.CreateEnrollment;
 using WebApi.Contracts.Enrollments.GetEnrollmentCard;
@@ -65,6 +67,18 @@ public class EnrollmentsController : BaseApiController
         var result = await _commands.ProcessCommandAsync(command, ct);
 
         return ToActionResult(result, card => Ok(EnrollmentCardResponse.From(card)));
+    }
+
+    [HttpPost("{id}/cancel")]
+    [ProducesResponseType<CancelledEnrollmentResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Cancel(long id, CancellationToken ct)
+    {
+        var result = await _commands.ProcessCommandAsync(new CancelEnrollmentCommand(CurrentUserId, id), ct);
+
+        return ToActionResult(result, cancelled => Ok(CancelledEnrollmentResponse.From(cancelled)));
     }
 
     [HttpGet("{id}")]

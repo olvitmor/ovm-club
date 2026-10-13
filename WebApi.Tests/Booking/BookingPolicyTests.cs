@@ -63,4 +63,30 @@ public class BookingPolicyTests
     {
         Assert.AreEqual(ConflictReason.CapacityExceeded, BookingPolicy.CheckCapacity(10, 5, int.MaxValue));
     }
+
+    [TestMethod]
+    public void StartedClassCannotBeCancelledUnlessClubCancelledIt()
+    {
+        Assert.IsNull(BookingPolicy.CheckCancellable(false, Now.AddTicks(10), Now));
+        Assert.AreEqual(ConflictReason.ClassStarted, BookingPolicy.CheckCancellable(false, Now, Now));
+        Assert.IsNull(BookingPolicy.CheckCancellable(true, Now.AddHours(-1), Now));
+    }
+
+    [TestMethod]
+    public void RefundIsFullFromCutoffAndZeroInside()
+    {
+        var cutoff = TimeSpan.FromHours(2);
+
+        Assert.AreEqual(3, BookingPolicy.RefundedVisits(false, Now.Add(cutoff), Now, 3, cutoff));
+        Assert.AreEqual(0, BookingPolicy.RefundedVisits(false, Now.Add(cutoff).AddTicks(-1), Now, 3, cutoff));
+    }
+
+    [TestMethod]
+    public void ClubCancelledClassRefundsFullyAnyTime()
+    {
+        var cutoff = TimeSpan.FromHours(2);
+
+        Assert.AreEqual(3, BookingPolicy.RefundedVisits(true, Now.AddMinutes(10), Now, 3, cutoff));
+        Assert.AreEqual(3, BookingPolicy.RefundedVisits(true, Now.AddHours(-1), Now, 3, cutoff));
+    }
 }
