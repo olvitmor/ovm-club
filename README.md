@@ -21,7 +21,7 @@ docker compose down -v
 docker compose up -d
 ```
 
-## Миграции - test
+## Миграции
 
 ```
 dotnet tool restore
