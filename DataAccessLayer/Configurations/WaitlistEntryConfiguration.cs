@@ -27,7 +27,7 @@ public class WaitlistEntryConfiguration : IEntityTypeConfiguration<WaitlistEntry
             .HasForeignKey(x => x.UserId);
 
         builder
-            .HasOne(x => x.Class)
+            .HasOne<Class>()
             .WithMany()
             .HasForeignKey(x => x.ClassId);
 

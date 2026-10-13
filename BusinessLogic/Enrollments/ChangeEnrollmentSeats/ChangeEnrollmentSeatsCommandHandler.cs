@@ -1,8 +1,10 @@
 using BusinessLogic.Booking;
+using BusinessLogic.Options;
 using BusinessLogic.Results;
 using BusinessLogic.Time;
 using DataAccessLayer.Entities;
 using DataAccessLayer.UnitOfWork;
+using Microsoft.Extensions.Options;
 using Ovm.Cqrs;
 
 namespace BusinessLogic.Enrollments.ChangeEnrollmentSeats;
@@ -12,11 +14,16 @@ public sealed class ChangeEnrollmentSeatsCommandHandler
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _timeProvider;
+    private readonly BookingOptions _options;
 
-    public ChangeEnrollmentSeatsCommandHandler(IUnitOfWork unitOfWork, TimeProvider timeProvider)
+    public ChangeEnrollmentSeatsCommandHandler(
+        IUnitOfWork unitOfWork,
+        TimeProvider timeProvider,
+        IOptions<BookingOptions> options)
     {
         _unitOfWork = unitOfWork;
         _timeProvider = timeProvider;
+        _options = options.Value;
     }
 
     public async Task<Result<EnrollmentCard>> HandleAsync(ChangeEnrollmentSeatsCommand command, CancellationToken ct)
@@ -53,34 +60,93 @@ public sealed class ChangeEnrollmentSeatsCommandHandler
 
         var difference = command.Seats - enrollment.Seats;
 
-        if (difference != 0)
+        if (difference > 0)
         {
             var pass = await _unitOfWork.Pass.LockByUserAsync(command.UserId, ct);
 
-            if (difference > 0)
+            var passConflict = BookingPolicy.CheckPassCovers(
+                pass.ValidUntil,
+                pass.RemainingVisits,
+                difference,
+                _timeProvider.GetUtcToday());
+
+            if (passConflict != null)
             {
-                var passConflict = BookingPolicy.CheckPassCovers(
-                    pass.ValidUntil,
-                    pass.RemainingVisits,
-                    difference,
-                    _timeProvider.GetUtcToday());
+                return passConflict.Value;
+            }
 
-                if (passConflict != null)
-                {
-                    return passConflict.Value;
-                }
+            var takenSeats = await _unitOfWork.Enrollment.GetActiveSeatsAsync(scheduledClass.Id, ct);
+            var capacityConflict = BookingPolicy.CheckCapacity(scheduledClass.Capacity, takenSeats, difference);
 
-                var takenSeats = await _unitOfWork.Enrollment.GetActiveSeatsAsync(scheduledClass.Id, ct);
-                var capacityConflict = BookingPolicy.CheckCapacity(scheduledClass.Capacity, takenSeats, difference);
-
-                if (capacityConflict != null)
-                {
-                    return capacityConflict.Value;
-                }
+            if (capacityConflict != null)
+            {
+                return capacityConflict.Value;
             }
 
             enrollment.Seats = command.Seats;
             pass.RemainingVisits -= difference;
+
+            await _unitOfWork.SaveChangesAsync(ct);
+        }
+        else if (difference < 0)
+        {
+            enrollment.Seats = command.Seats;
+
+            await _unitOfWork.SaveChangesAsync(ct);
+
+            var waitlist = new List<WaitlistEntry>();
+            var freeSeats = 0;
+
+            if (WaitlistPolicy.IsOpen(scheduledClass.IsCancelled, scheduledClass.StartsAt, now, _options.WaitlistCloseBefore))
+            {
+                freeSeats = scheduledClass.Capacity - await _unitOfWork.Enrollment.GetActiveSeatsAsync(scheduledClass.Id, ct);
+                waitlist = await _unitOfWork.Waitlist.GetWaitingAsync(scheduledClass.Id, freeSeats, ct);
+            }
+
+            var passes = (await _unitOfWork.Pass.LockByUsersAsync(
+                    waitlist.Select(x => x.UserId).Append(command.UserId).ToList(),
+                    ct))
+                .ToDictionary(x => x.UserId);
+
+            // решение: возврат начисляется до перевода — если инициатор сам ждёт на этом занятии,
+            // он переводится на общих правилах и может сразу потратить вернувшиеся посещения.
+            passes[command.UserId].RemainingVisits -= difference;
+
+            var promotedIds = WaitlistPolicy.SelectPromotions(
+                waitlist.Select(x => new WaitlistCandidate(
+                    x.Id,
+                    x.Seats,
+                    passes[x.UserId].ValidUntil,
+                    passes[x.UserId].RemainingVisits)),
+                freeSeats,
+                _timeProvider.GetUtcToday());
+
+            var promotions = new List<(WaitlistEntry Entry, Enrollment Enrollment)>();
+
+            foreach (var entry in waitlist.Where(x => promotedIds.Contains(x.Id)))
+            {
+                var promoted = await _unitOfWork.Enrollment.CreateAsync(
+                    new Enrollment
+                    {
+                        UserId = entry.UserId,
+                        ClassId = scheduledClass.Id,
+                        Seats = entry.Seats,
+                        Status = EnrollmentStatus.Active,
+                        CreatedAt = now
+                    },
+                    ct);
+
+                entry.Status = WaitlistStatus.Promoted;
+                passes[entry.UserId].RemainingVisits -= entry.Seats;
+                promotions.Add((entry, promoted));
+            }
+
+            await _unitOfWork.SaveChangesAsync(ct);
+
+            foreach (var (entry, promoted) in promotions)
+            {
+                entry.EnrollmentId = promoted.Id;
+            }
 
             await _unitOfWork.SaveChangesAsync(ct);
         }

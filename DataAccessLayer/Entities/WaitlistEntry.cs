@@ -19,6 +19,4 @@ public class WaitlistEntry : IEntity
     public DateTime? CancelledAt { get; set; }
 
     public long? EnrollmentId { get; set; }
-
-    public Class Class { get; set; } = null!;
 }

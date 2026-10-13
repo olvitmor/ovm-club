@@ -68,15 +68,72 @@ public sealed class CancelEnrollmentCommandHandler
             enrollment.Seats,
             _options.RefundCutoff);
 
-        if (refundedVisits > 0)
-        {
-            var pass = await _unitOfWork.Pass.LockByUserAsync(command.UserId, ct);
-            pass.RemainingVisits += refundedVisits;
-        }
-
         enrollment.Status = EnrollmentStatus.Cancelled;
         enrollment.CancelledAt = now;
         enrollment.RefundedVisits = refundedVisits;
+
+        await _unitOfWork.SaveChangesAsync(ct);
+
+        var waitlist = new List<WaitlistEntry>();
+        var freeSeats = 0;
+
+        if (WaitlistPolicy.IsOpen(scheduledClass.IsCancelled, scheduledClass.StartsAt, now, _options.WaitlistCloseBefore))
+        {
+            freeSeats = scheduledClass.Capacity - await _unitOfWork.Enrollment.GetActiveSeatsAsync(scheduledClass.Id, ct);
+            waitlist = await _unitOfWork.Waitlist.GetWaitingAsync(scheduledClass.Id, freeSeats, ct);
+        }
+
+        var userIds = waitlist.Select(x => x.UserId).ToList();
+
+        if (refundedVisits > 0)
+        {
+            userIds.Add(command.UserId);
+        }
+
+        var passes = (await _unitOfWork.Pass.LockByUsersAsync(userIds, ct)).ToDictionary(x => x.UserId);
+
+        // решение: возврат начисляется до перевода — если инициатор сам ждёт на этом занятии,
+        // он переводится на общих правилах и может сразу потратить вернувшиеся посещения.
+        if (refundedVisits > 0)
+        {
+            passes[command.UserId].RemainingVisits += refundedVisits;
+        }
+
+        var promotedIds = WaitlistPolicy.SelectPromotions(
+            waitlist.Select(x => new WaitlistCandidate(
+                x.Id,
+                x.Seats,
+                passes[x.UserId].ValidUntil,
+                passes[x.UserId].RemainingVisits)),
+            freeSeats,
+            _timeProvider.GetUtcToday());
+
+        var promotions = new List<(WaitlistEntry Entry, Enrollment Enrollment)>();
+
+        foreach (var entry in waitlist.Where(x => promotedIds.Contains(x.Id)))
+        {
+            var promoted = await _unitOfWork.Enrollment.CreateAsync(
+                new Enrollment
+                {
+                    UserId = entry.UserId,
+                    ClassId = scheduledClass.Id,
+                    Seats = entry.Seats,
+                    Status = EnrollmentStatus.Active,
+                    CreatedAt = now
+                },
+                ct);
+
+            entry.Status = WaitlistStatus.Promoted;
+            passes[entry.UserId].RemainingVisits -= entry.Seats;
+            promotions.Add((entry, promoted));
+        }
+
+        await _unitOfWork.SaveChangesAsync(ct);
+
+        foreach (var (entry, promoted) in promotions)
+        {
+            entry.EnrollmentId = promoted.Id;
+        }
 
         await _unitOfWork.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
