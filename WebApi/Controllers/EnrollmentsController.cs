@@ -7,8 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 using Ovm.Cqrs;
 using WebApi.Contracts.Enrollments.CancelEnrollment;
 using WebApi.Contracts.Enrollments.ChangeEnrollmentSeats;
+using WebApi.Contracts.Enrollments.CommonModels;
 using WebApi.Contracts.Enrollments.CreateEnrollment;
-using WebApi.Contracts.Enrollments.GetEnrollmentCard;
 using WebApi.RateLimiting;
 
 namespace WebApi.Controllers;

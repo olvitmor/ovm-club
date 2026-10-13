@@ -1,4 +1,5 @@
 using BusinessLogic.Booking;
+using BusinessLogic.Enrollments.Services;
 using BusinessLogic.Options;
 using BusinessLogic.Results;
 using BusinessLogic.Time;
@@ -82,6 +83,7 @@ public sealed class CancelEnrollmentCommandHandler
 
         if (WaitlistPolicy.IsOpen(scheduledClass.IsCancelled, scheduledClass.StartsAt, now, _options.WaitlistCloseBefore))
         {
+            // решение: в очередь уходят все свободные места занятия, а не только освобождённые этой операцией.
             freeSeats = scheduledClass.Capacity - await _unitOfWork.Enrollment.GetActiveSeatsAsync(scheduledClass.Id, ct);
             waitlist = await _unitOfWork.Waitlist.GetWaitingAsync(scheduledClass.Id, freeSeats, ct);
         }

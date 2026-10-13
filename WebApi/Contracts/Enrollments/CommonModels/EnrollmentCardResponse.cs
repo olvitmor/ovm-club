@@ -1,6 +1,7 @@
-using BusinessLogic.Enrollments;
+using BusinessLogic.Enrollments.CommonModels;
+using WebApi.Contracts.CommonModels;
 
-namespace WebApi.Contracts.Enrollments.GetEnrollmentCard;
+namespace WebApi.Contracts.Enrollments.CommonModels;
 
 public record EnrollmentCardResponse(
     long Id,

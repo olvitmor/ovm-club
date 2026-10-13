@@ -1,8 +1,9 @@
+using BusinessLogic.Enrollments.CommonModels;
 using DataAccessLayer.UnitOfWork;
 using DataReadAccessLayer;
 using Microsoft.EntityFrameworkCore;
 
-namespace BusinessLogic.Enrollments;
+namespace BusinessLogic.Enrollments.Helpers;
 
 public static class EnrollmentCardReader
 {

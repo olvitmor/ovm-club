@@ -1,9 +1,10 @@
+using BusinessLogic.Enrollments.CommonModels;
 using BusinessLogic.Options;
 using Common.Caching;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace BusinessLogic.Enrollments;
+namespace BusinessLogic.Enrollments.Services;
 
 public sealed class EnrollmentCardCache
 {

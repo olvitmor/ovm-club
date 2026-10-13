@@ -35,6 +35,8 @@ public sealed class LeaveWaitlistCommandHandler : ICommandHandler<LeaveWaitlistC
         // поэтому уйти из очереди и одновременно получить бронь нельзя.
         await _unitOfWork.DbContext.Entry(entry).ReloadAsync(ct);
 
+        // решение: переведённую запись не отменяем — ответ cancelled был бы неправдой, у клиента уже бронь,
+        // и отменять её нужно через отмену брони по её правилам.
         if (entry.Status == WaitlistStatus.Promoted)
         {
             return ConflictReason.AlreadyPromoted;

@@ -1,4 +1,5 @@
 using BusinessLogic.Schedule.GetSchedule;
+using WebApi.Contracts.CommonModels;
 
 namespace WebApi.Contracts.Schedule.GetSchedule;
 
@@ -9,7 +10,7 @@ public record ScheduleItemResponse(
     string Title,
     DateTime StartsAt,
     int DurationMinutes,
-    ScheduleRoomResponse Room,
+    RoomResponse Room,
     int Capacity,
     int FreeSeats,
     int MySeats)
@@ -21,11 +22,9 @@ public record ScheduleItemResponse(
             item.Title,
             item.StartsAt,
             item.DurationMinutes,
-            new ScheduleRoomResponse(item.Room.Id, item.Room.Name),
+            new RoomResponse(item.Room.Id, item.Room.Name),
             item.Capacity,
             item.FreeSeats,
             item.MySeats);
     }
 }
-
-public record ScheduleRoomResponse(long Id, string Name);

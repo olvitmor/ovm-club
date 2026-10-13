@@ -102,6 +102,8 @@ public sealed class JoinWaitlistCommandHandler : ICommandHandler<JoinWaitlistCom
             return ConflictReason.SeatsAvailable;
         }
 
+        // решение: абонемент при постановке не проверяется и посещения не списываются — в контракте очереди
+        // нет причин pass-*, а посещения списываются при переводе в бронь.
         var entry = await _unitOfWork.Waitlist.CreateAsync(
             new WaitlistEntry
             {

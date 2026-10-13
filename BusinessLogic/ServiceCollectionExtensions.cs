@@ -1,4 +1,4 @@
-using BusinessLogic.Enrollments;
+using BusinessLogic.Enrollments.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Ovm.Cqrs;
 

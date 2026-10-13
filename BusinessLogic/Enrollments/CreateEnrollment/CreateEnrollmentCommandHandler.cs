@@ -1,5 +1,6 @@
 using System.Text.Json;
 using BusinessLogic.Booking;
+using BusinessLogic.Enrollments.Services;
 using BusinessLogic.Idempotency;
 using BusinessLogic.Options;
 using BusinessLogic.Results;

@@ -1,4 +1,4 @@
-namespace BusinessLogic.Enrollments;
+namespace BusinessLogic.Enrollments.CommonModels;
 
 public record EnrollmentCard(
     long Id,
